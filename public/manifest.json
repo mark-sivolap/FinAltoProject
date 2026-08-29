@@ -1,0 +1,9 @@
+{
+  "name": "Website Starter",
+  "short_name": "Starter",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1d2335",
+  "theme_color": "#000000",
+  "icons": []
+}
