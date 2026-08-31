@@ -6,10 +6,10 @@ import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 import "primeflex/primeflex.css";
 import "./globals.css";
-import { AuthWrapper, Content } from "@/components/shared/AuthWrapper";
 
 export const metadata: Metadata = {
-  title: "Website Starter",
+  title: "InvoiceFlow | Invoice to CSV",
+  description: "Turn a batch of PDF invoices into one clean CSV.",
 };
 
 export default function RootLayout({
@@ -28,21 +28,19 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <AuthWrapper>
-          <Header />
-          <div
-            className="page"
-            style={{
-              height: "90vh",
-              overflowY: "auto",
-              position: "fixed",
-              top: "10vh",
-              width: "100vw",
-            }}
-          >
-            <Content>{children}</Content>
-          </div>
-        </AuthWrapper>
+        <Header />
+        <div
+          className="page"
+          style={{
+            height: "90vh",
+            overflowY: "auto",
+            position: "fixed",
+            top: "10vh",
+            width: "100vw",
+          }}
+        >
+          {children}
+        </div>
       </body>
     </html>
   );

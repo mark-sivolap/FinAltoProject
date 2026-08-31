@@ -10,7 +10,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@azure/msal-browser": "^4.24.1",
     "next": "^14.2.33",
     "primeflex": "^4.0.0",
     "primeicons": "^7.0.0",
