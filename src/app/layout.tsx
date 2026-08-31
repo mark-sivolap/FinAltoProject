@@ -8,8 +8,8 @@ import "primeflex/primeflex.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "InvoiceFlow | Invoice to CSV",
-  description: "Turn a batch of PDF invoices into one clean CSV.",
+  title: "StatementFlow | Bank Statement to CSV",
+  description: "Turn a batch of bank statements into one clean transactions CSV.",
 };
 
 export default function RootLayout({

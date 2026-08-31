@@ -3,9 +3,21 @@
 import { ChangeEvent, DragEvent, useMemo, useRef, useState } from "react";
 
 const API_URL =
-  process.env.NEXT_PUBLIC_INVOICE_API_URL ||
+  process.env.NEXT_PUBLIC_STATEMENT_API_URL ||
   "http://localhost:7071/api";
 const API_BASE = API_URL.replace(/\/$/, "");
+
+const ACCEPTED_EXTENSIONS = [
+  ".pdf",
+  ".docx",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".tiff",
+  ".tif",
+  ".bmp",
+  ".heic",
+];
 
 function readableSize(bytes: number) {
   return bytes < 1024 * 1024
@@ -14,7 +26,8 @@ function readableSize(bytes: number) {
 }
 
 function isAccepted(file: File) {
-  return file.name.toLowerCase().endsWith(".pdf");
+  const name = file.name.toLowerCase();
+  return ACCEPTED_EXTENSIONS.some((extension) => name.endsWith(extension));
 }
 
 function readBlobAsText(blob: Blob): Promise<string> {
@@ -26,23 +39,22 @@ function readBlobAsText(blob: Blob): Promise<string> {
   });
 }
 
-function submitInvoices(
+function submitStatements(
   files: File[],
-  onProgress: (percent: number, phase: "uploading" | "processing") => void,
+  onProgress: (percent: number) => void,
 ): Promise<Blob> {
   const formData = new FormData();
   files.forEach((file) => formData.append("files", file));
 
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
-    request.open("POST", `${API_BASE}/process-invoices`);
+    request.open("POST", `${API_BASE}/process-statements`);
     request.responseType = "blob";
     request.upload.onprogress = (event) => {
       if (event.lengthComputable) {
-        onProgress(Math.round((event.loaded / event.total) * 100), "uploading");
+        onProgress(Math.round((event.loaded / event.total) * 100));
       }
     };
-    request.upload.onload = () => onProgress(100, "processing");
     request.onerror = () => reject(new Error("Could not reach the server."));
     request.onload = async () => {
       if (request.status >= 200 && request.status < 300) {
@@ -56,13 +68,12 @@ function submitInvoices(
   });
 }
 
-export default function InvoiceUploader() {
+export default function StatementUploader() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [phase, setPhase] = useState<"uploading" | "processing">("uploading");
   const [error, setError] = useState("");
   const [completed, setCompleted] = useState(false);
   const totalBytes = useMemo(
@@ -75,7 +86,7 @@ export default function InvoiceUploader() {
     setCompleted(false);
     const invalid = incoming.find((file) => !isAccepted(file));
     if (invalid) {
-      setError(`${invalid.name} is not a supported invoice file.`);
+      setError(`${invalid.name} is not a supported bank statement file.`);
       return;
     }
     setFiles((current) => {
@@ -104,22 +115,18 @@ export default function InvoiceUploader() {
     if (!busy) addFiles(Array.from(event.dataTransfer.files));
   }
 
-  async function processInvoices() {
+  async function processStatements() {
     if (!files.length || busy) return;
     setBusy(true);
     setProgress(0);
-    setPhase("uploading");
     setError("");
     setCompleted(false);
     try {
-      const csv = await submitInvoices(files, (percent, nextPhase) => {
-        setProgress(percent);
-        setPhase(nextPhase);
-      });
+      const csv = await submitStatements(files, setProgress);
       const url = URL.createObjectURL(csv);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "invoices.csv";
+      link.download = "transactions.csv";
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -135,18 +142,17 @@ export default function InvoiceUploader() {
   function reset() {
     setFiles([]);
     setProgress(0);
-    setPhase("uploading");
     setError("");
     setCompleted(false);
   }
 
   return (
-    <main className="invoice-shell">
-      <section className="invoice-hero">
-        <span className="eyebrow">Invoice intelligence</span>
+    <main className="statement-shell">
+      <section className="statement-hero">
+        <span className="eyebrow">Bank statement intelligence</span>
         <p>
-          Drop your invoices and receive one spreadsheet-ready CSV, including
-          every line item.
+          Drop your bank statements and receive one spreadsheet-ready CSV of
+          every transaction.
         </p>
       </section>
 
@@ -174,7 +180,7 @@ export default function InvoiceUploader() {
           <input
             ref={inputRef}
             type="file"
-            accept=".pdf,application/pdf"
+            accept={ACCEPTED_EXTENSIONS.join(",")}
             multiple
             hidden
             onChange={handleInput}
@@ -182,9 +188,9 @@ export default function InvoiceUploader() {
           <div className="upload-icon">
             <i className="pi pi-cloud-upload" />
           </div>
-          <h2>{dragging ? "Drop invoices here" : "Drag and drop invoices"}</h2>
+          <h2>{dragging ? "Drop statements here" : "Drag and drop bank statements"}</h2>
           <p>
-            or <span>browse your files</span> · PDF
+            or <span>browse your files</span> · PDF, DOCX, PNG, JPG, TIFF, BMP, HEIC
           </p>
         </div>
 
@@ -193,7 +199,7 @@ export default function InvoiceUploader() {
             <div className="file-summary">
               <div>
                 <strong>
-                  {files.length} invoice{files.length === 1 ? "" : "s"}
+                  {files.length} statement{files.length === 1 ? "" : "s"}
                 </strong>
                 <span>{readableSize(totalBytes)} total</span>
               </div>
@@ -237,17 +243,15 @@ export default function InvoiceUploader() {
           </div>
         )}
         {busy && (
-          <div className="job-progress">
+          <div className="upload-progress">
             <div>
-              <strong>
-                {phase === "uploading" ? "Uploading invoices" : "Reading invoice data"}
-              </strong>
+              <strong>Processing statements</strong>
               <span>{progress}%</span>
             </div>
             <div className="progress-track">
               <span style={{ width: `${progress}%` }} />
             </div>
-            <p>Keep this tab open while the CSV is prepared.</p>
+            <p>This tab must stay open until the CSV is ready.</p>
           </div>
         )}
         {completed && (
@@ -257,7 +261,7 @@ export default function InvoiceUploader() {
             </div>
             <div>
               <h3>Your CSV was downloaded</h3>
-              <p>The combined invoice data is ready to open.</p>
+              <p>The combined transaction data is ready to open.</p>
             </div>
           </div>
         )}
@@ -267,10 +271,10 @@ export default function InvoiceUploader() {
               className="primary-button"
               type="button"
               disabled={!files.length || busy}
-              onClick={() => void processInvoices()}
+              onClick={() => void processStatements()}
             >
               <i className="pi pi-sparkles" />
-              {busy ? "Processing…" : "Process invoices"}
+              {busy ? "Processing…" : "Process statements"}
             </button>
           ) : (
             <button className="secondary-button" type="button" onClick={reset}>

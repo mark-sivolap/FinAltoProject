@@ -1,6 +1,6 @@
 "use client";
-import InvoiceUploader from "@/components/InvoiceUploader";
+import StatementUploader from "@/components/StatementUploader";
 
 export default function HomePage() {
-  return <InvoiceUploader />;
+  return <StatementUploader />;
 }
